@@ -1,9 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 
-import {
-  buildOhMyPiAcpSpawnInput,
-  OH_MY_PI_AUTH_METHOD_ID,
-} from "./OhMyPiAcpSupport.ts";
+import { buildOhMyPiAcpSpawnInput, OH_MY_PI_AUTH_METHOD_ID } from "./OhMyPiAcpSupport.ts";
 
 describe("OhMyPiAcpSupport", () => {
   it("launches the normal OMP ACP command from PATH", () => {

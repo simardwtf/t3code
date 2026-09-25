@@ -94,7 +94,9 @@ function permissionOptionId(
   return request.options.find((option) => option.kind === kind)?.optionId.trim() || undefined;
 }
 
-function autoApproveOptionId(request: EffectAcpSchema.RequestPermissionRequest): string | undefined {
+function autoApproveOptionId(
+  request: EffectAcpSchema.RequestPermissionRequest,
+): string | undefined {
   return permissionOptionId(request, "acceptForSession") ?? permissionOptionId(request, "accept");
 }
 
@@ -120,15 +122,14 @@ export function makeOhMyPiAdapter(
     const events = yield* PubSub.unbounded<ProviderRuntimeEvent>();
 
     const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
-    const nextId = crypto.randomUUIDv4.pipe(
-      Effect.orDie,
-    );
+    const nextId = crypto.randomUUIDv4.pipe(Effect.orDie);
     const stamp = () =>
       Effect.all({
         eventId: Effect.map(nextId, EventId.make),
         createdAt: nowIso,
       });
-    const publish = (event: ProviderRuntimeEvent) => PubSub.publish(events, event).pipe(Effect.asVoid);
+    const publish = (event: ProviderRuntimeEvent) =>
+      PubSub.publish(events, event).pipe(Effect.asVoid);
 
     const mapAcpCallbackFailure = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
       effect.pipe(
@@ -215,9 +216,7 @@ export function makeOhMyPiAdapter(
                     type: "http" as const,
                     name: "t3-code",
                     url: mcpSession.endpoint,
-                    headers: [
-                      { name: "Authorization", value: mcpSession.authorizationHeader },
-                    ],
+                    headers: [{ name: "Authorization", value: mcpSession.authorizationHeader }],
                   },
                 ],
               }
@@ -275,7 +274,8 @@ export function makeOhMyPiAdapter(
                   decision: resolved,
                 }),
               );
-              const optionId = resolved === "cancel" ? undefined : permissionOptionId(params, resolved);
+              const optionId =
+                resolved === "cancel" ? undefined : permissionOptionId(params, resolved);
               return {
                 outcome: optionId
                   ? { outcome: "selected" as const, optionId }
@@ -285,11 +285,13 @@ export function makeOhMyPiAdapter(
           ),
         );
 
-        const started = yield* acp.start().pipe(
-          Effect.mapError((error) =>
-            mapAcpToAdapterError(PROVIDER, input.threadId, "session/start", error),
-          ),
-        );
+        const started = yield* acp
+          .start()
+          .pipe(
+            Effect.mapError((error) =>
+              mapAcpToAdapterError(PROVIDER, input.threadId, "session/start", error),
+            ),
+          );
         const createdAt = yield* nowIso;
         const session: ProviderSession = {
           provider: PROVIDER,
@@ -532,7 +534,9 @@ export function makeOhMyPiAdapter(
         if (turnId !== undefined && active !== undefined && turnId !== active) return;
         yield* settleApprovals(ctx);
         yield* ctx.acp.cancel.pipe(
-          Effect.mapError((error) => mapAcpToAdapterError(PROVIDER, threadId, "session/cancel", error)),
+          Effect.mapError((error) =>
+            mapAcpToAdapterError(PROVIDER, threadId, "session/cancel", error),
+          ),
           Effect.ignore,
         );
         if (active) {

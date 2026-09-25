@@ -78,7 +78,9 @@ export const makeOhMyPiTextGeneration = Effect.fn("makeOhMyPiTextGeneration")(fu
         Effect.flatMap(
           Option.match({
             onNone: () =>
-              Effect.fail(new TextGenerationError({ operation, detail: "Oh My Pi ACP request timed out." })),
+              Effect.fail(
+                new TextGenerationError({ operation, detail: "Oh My Pi ACP request timed out." }),
+              ),
             onSome: Effect.succeed,
           }),
         ),
@@ -118,7 +120,11 @@ export const makeOhMyPiTextGeneration = Effect.fn("makeOhMyPiTextGeneration")(fu
       Effect.mapError((cause) =>
         isTextGenerationError(cause)
           ? cause
-          : new TextGenerationError({ operation, detail: "Oh My Pi text generation failed.", cause }),
+          : new TextGenerationError({
+              operation,
+              detail: "Oh My Pi text generation failed.",
+              cause,
+            }),
       ),
       Effect.scoped,
     );
