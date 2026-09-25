@@ -23,6 +23,7 @@ import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 import * as ChildProcessSpawner from "effect/unstable/process/ChildProcessSpawner";
 import type * as EffectAcpSchema from "effect-acp/schema";
+import * as EffectAcpErrors from "effect-acp/errors";
 
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
 import { ServerConfig } from "../../config.ts";
@@ -129,6 +130,17 @@ export function makeOhMyPiAdapter(
       });
     const publish = (event: ProviderRuntimeEvent) => PubSub.publish(events, event).pipe(Effect.asVoid);
 
+    const mapAcpCallbackFailure = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+      effect.pipe(
+        Effect.mapError(
+          (cause) =>
+            new EffectAcpErrors.AcpTransportError({
+              detail: "Failed to process Oh My Pi ACP callback.",
+              cause,
+            }),
+        ),
+      );
+
     const requireSession = (threadId: ThreadId) => {
       const session = sessions.get(threadId);
       return session && !session.stopped
@@ -220,61 +232,56 @@ export function makeOhMyPiAdapter(
 
         const pendingApprovals = new Map<ApprovalRequestId, PendingApproval>();
         yield* acp.handleRequestPermission((params) =>
-          Effect.gen(function* () {
-            if (input.runtimeMode === "full-access") {
-              const optionId = autoApproveOptionId(params);
-              if (optionId) {
-                return { outcome: { outcome: "selected" as const, optionId } };
+          mapAcpCallbackFailure(
+            Effect.gen(function* () {
+              if (input.runtimeMode === "full-access") {
+                const optionId = autoApproveOptionId(params);
+                if (optionId) {
+                  return { outcome: { outcome: "selected" as const, optionId } };
+                }
               }
-            }
 
-            const permissionRequest = parsePermissionRequest(params);
-            const requestId = ApprovalRequestId.make(yield* nextId);
-            const runtimeRequestId = RuntimeRequestId.make(requestId);
-            const decision = yield* Deferred.make<ProviderApprovalDecision>();
-            pendingApprovals.set(requestId, decision);
-            const activeTurnId = sessions.get(input.threadId)?.activeTurnId;
-            yield* publish(
-              makeAcpRequestOpenedEvent({
-                stamp: yield* stamp(),
-                provider: PROVIDER,
-                threadId: input.threadId,
-                turnId: activeTurnId,
-                requestId: runtimeRequestId,
-                permissionRequest,
-                detail: permissionRequest.detail ?? "Oh My Pi requests permission.",
-                args: params,
-                source: "acp.jsonrpc",
-                method: "session/request_permission",
-                rawPayload: params,
-              }),
-            );
-            const resolved = yield* Deferred.await(decision);
-            pendingApprovals.delete(requestId);
-            yield* publish(
-              makeAcpRequestResolvedEvent({
-                stamp: yield* stamp(),
-                provider: PROVIDER,
-                threadId: input.threadId,
-                turnId: activeTurnId,
-                requestId: runtimeRequestId,
-                permissionRequest,
-                decision: resolved,
-              }),
-            );
-            const optionId = resolved === "cancel" ? undefined : permissionOptionId(params, resolved);
-            return {
-              outcome: optionId
-                ? { outcome: "selected" as const, optionId }
-                : ({ outcome: "cancelled" } as const),
-            };
-          }).pipe(
-            Effect.mapError((cause) => ({
-              _tag: "AcpTransportError" as const,
-              message: cause instanceof Error ? cause.message : String(cause),
-              detail: "Failed to process Oh My Pi permission request.",
-              cause,
-            }) as never),
+              const permissionRequest = parsePermissionRequest(params);
+              const requestId = ApprovalRequestId.make(yield* nextId);
+              const runtimeRequestId = RuntimeRequestId.make(requestId);
+              const decision = yield* Deferred.make<ProviderApprovalDecision>();
+              pendingApprovals.set(requestId, decision);
+              const activeTurnId = sessions.get(input.threadId)?.activeTurnId;
+              yield* publish(
+                makeAcpRequestOpenedEvent({
+                  stamp: yield* stamp(),
+                  provider: PROVIDER,
+                  threadId: input.threadId,
+                  turnId: activeTurnId,
+                  requestId: runtimeRequestId,
+                  permissionRequest,
+                  detail: permissionRequest.detail ?? "Oh My Pi requests permission.",
+                  args: params,
+                  source: "acp.jsonrpc",
+                  method: "session/request_permission",
+                  rawPayload: params,
+                }),
+              );
+              const resolved = yield* Deferred.await(decision);
+              pendingApprovals.delete(requestId);
+              yield* publish(
+                makeAcpRequestResolvedEvent({
+                  stamp: yield* stamp(),
+                  provider: PROVIDER,
+                  threadId: input.threadId,
+                  turnId: activeTurnId,
+                  requestId: runtimeRequestId,
+                  permissionRequest,
+                  decision: resolved,
+                }),
+              );
+              const optionId = resolved === "cancel" ? undefined : permissionOptionId(params, resolved);
+              return {
+                outcome: optionId
+                  ? { outcome: "selected" as const, optionId }
+                  : ({ outcome: "cancelled" } as const),
+              };
+            }),
           ),
         );
 
@@ -389,10 +396,10 @@ export function makeOhMyPiAdapter(
             }),
           ),
         ).pipe(
-          Effect.catch((cause) =>
+          Effect.catchCause((cause) =>
             Effect.logError("Failed to process Oh My Pi ACP notification.", { cause }),
           ),
-          Effect.forkChild,
+          Effect.forkIn(sessionScope),
         );
         ctx.notificationFiber = notificationFiber;
         transferred = true;

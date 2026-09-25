@@ -7,7 +7,7 @@ import {
 
 describe("OhMyPiAcpSupport", () => {
   it("launches the normal OMP ACP command from PATH", () => {
-    expect(buildOhMyPiAcpSpawnInput({}, "/tmp/project")).toEqual({
+    expect(buildOhMyPiAcpSpawnInput({ binaryPath: "" }, "/tmp/project")).toEqual({
       command: "omp",
       args: ["acp"],
       cwd: "/tmp/project",

@@ -64,7 +64,8 @@ export const makeOhMyPiTextGeneration = Effect.fn("makeOhMyPiTextGeneration")(fu
         if (update.sessionUpdate !== "agent_message_chunk" || update.content.type !== "text") {
           return Effect.void;
         }
-        return Ref.update(outputRef, (current) => current + update.content.text);
+        const text = update.content.text;
+        return Ref.update(outputRef, (current) => current + text);
       });
 
       // Deliberately do not call setModel/setSessionModel. OMP chooses the

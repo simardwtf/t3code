@@ -587,7 +587,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       );
       const linux = yield* createBuildConfig(
         "linux",
-        "AppImage,deb",
+        "AppImage",
         "1.2.3",
         false,
         false,
@@ -672,7 +672,6 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual((linux.linux as Record<string, unknown>).target, ["AppImage", "deb"]);
       // Linux must register the renderer schemes so the generated .desktop
       // entry advertises MimeType=x-scheme-handler/t3code; for OAuth deep links.
-      assert.deepStrictEqual((linux.linux as Record<string, unknown>).target, ["AppImage", "deb"]);
       assert.deepStrictEqual((linux.linux as Record<string, unknown>).protocols, [
         { name: "T3 Code", schemes: ["t3code", "t3code-dev"] },
       ]);

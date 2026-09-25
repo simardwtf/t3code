@@ -2683,16 +2683,11 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     }
   }
 
-  const targets = target
-    .split(",")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
   if (platform === "mac") {
     const path = yield* Path.Path;
     const repoRoot = yield* RepoRoot;
     buildConfig.mac = {
-      target: targets.includes("dmg") ? [...targets, "zip"] : targets,
+      target: target === "dmg" ? [target, "zip"] : [target],
       icon: "icon.icns",
       category: "public.app-category.developer-tools",
       extendInfo: {
@@ -2715,7 +2710,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     };
   }
 
-  if (platform === "mac" && targets.includes("dmg")) {
+  if (platform === "mac" && target === "dmg") {
     buildConfig.dmg = {
       // Give the themed installer its own Finder volume name. Finder caches
       // DMG window backgrounds by volume name, so reusing a generic name can
@@ -2743,9 +2738,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       // electron-builder lists both in latest-linux.yml and writes
       // resources/package-type into the .deb only, so electron-updater updates
       // each install in its own format.
-      target: targets.includes("AppImage") && !targets.includes("deb")
-        ? [...targets, "deb"]
-        : targets,
+      target: target === "AppImage" ? [target, "deb"] : [target],
       executableName: "t3code",
       icon: "icons",
       category: "Development",
@@ -2793,7 +2786,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     // in trading update bandwidth for install speed.
     buildConfig.nsis = { differentialPackage: true };
     const winConfig: Record<string, unknown> = {
-      target: targets,
+      target: [target],
       icon: "icon.ico",
       // Resource editing applies the product metadata and icon independently
       // of code signing. Disabling it for local unsigned builds leaves the
@@ -3902,7 +3895,7 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   ),
   target: Flag.String("target").pipe(
     Flag.withDescription(
-      "Artifact target or comma-separated targets, for example dmg/AppImage,deb/nsis (env: T3CODE_DESKTOP_TARGET).",
+      "Artifact target, for example dmg/AppImage/nsis (env: T3CODE_DESKTOP_TARGET).",
     ),
     Flag.optional,
   ),
