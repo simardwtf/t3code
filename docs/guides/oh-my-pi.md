@@ -40,3 +40,5 @@ The integration uses standard T3 ACP plumbing for session creation/resume, strea
 ## Maintenance design
 
 The provider is implemented as an ordinary T3 `ProviderDriver` plus ACP adapter/support files. Shared orchestration, database schemas, thread formats, mobile protocols, and native role routing are unchanged. The ACP spawn/runtime portion is intentionally small enough to migrate later to a generic external-ACP provider factory.
+
+This fork syncs `pingdotgg/t3code` with merge commits into its own `main`; it does not rebase fork commits or push to upstream. Publish changes only to `simardwtf/t3code`. Debian desktop packaging is now upstream-owned, so the fork no longer maintains separate multi-target artifact logic.
